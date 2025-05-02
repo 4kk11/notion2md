@@ -109,15 +109,15 @@ impl NotionToMarkdown {
             }
             BlockType::Heading1 { heading_1 } => {
                 let text = self.rich_text_to_markdown(&heading_1.rich_text);
-                Ok(format!("# {}\n", text))
+                Ok(format!("{}\n", utils::heading1(&text)))
             }
             BlockType::Heading2 { heading_2 } => {
                 let text = self.rich_text_to_markdown(&heading_2.rich_text);
-                Ok(format!("## {}\n", text))
+                Ok(format!("{}\n", utils::heading2(&text)))
             }
             BlockType::Heading3 { heading_3 } => {
                 let text = self.rich_text_to_markdown(&heading_3.rich_text);
-                Ok(format!("### {}\n", text))
+                Ok(format!("{}\n", utils::heading3(&text)))
             }
             BlockType::BulletedListItem { bulleted_list_item } => {
                 let text = self.rich_text_to_markdown(&bulleted_list_item.rich_text);
