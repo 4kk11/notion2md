@@ -287,6 +287,7 @@ impl NotionToMarkdown {
                 embed.url
             )),
             _ => {
+                log::warn!("Unsupported block type: {:?}", block.block_type);
                 if !children.is_empty() {
                     self.convert_blocks_to_markdown(children)
                 } else {
