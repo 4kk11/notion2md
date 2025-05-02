@@ -121,7 +121,7 @@ impl NotionToMarkdown {
             }
             BlockType::BulletedListItem { bulleted_list_item } => {
                 let text = self.rich_text_to_markdown(&bulleted_list_item.rich_text);
-                let mut content = format!("- {}\n", text);
+                let mut content = format!("{}\n", utils::bullet(&text, None));
 
                 if !children.is_empty() {
                     let child_content = self.convert_blocks_to_markdown(children)?;
@@ -141,7 +141,7 @@ impl NotionToMarkdown {
             BlockType::NumberedListItem { numbered_list_item } => {
                 let text = self.rich_text_to_markdown(&numbered_list_item.rich_text);
                 let number = list_context.next_number();
-                let mut content = format!("{}. {}\n", number, text);
+                let mut content = format!("{}\n", utils::bullet(&text, Some(number)));
 
                 if !children.is_empty() {
                     list_context.push();
@@ -163,16 +163,11 @@ impl NotionToMarkdown {
             }
             BlockType::ToDo { to_do } => {
                 let text = self.rich_text_to_markdown(&to_do.rich_text);
-                let checkbox = if to_do.checked.unwrap_or(false) {
-                    "[x]"
-                } else {
-                    "[ ]"
-                };
-                Ok(format!("- {} {}\n", checkbox, text))
+                Ok(format!("{}\n", utils::todo(&text, to_do.checked.unwrap_or_default())))
             }
             BlockType::Toggle { toggle } => {
                 let text = self.rich_text_to_markdown(&toggle.rich_text);
-                let mut content = format!("- {}\n", text);
+                let mut content = format!("{}\n", utils::bullet(&text, None));
 
                 if !children.is_empty() {
                     let child_content = self.convert_blocks_to_markdown(children)?;
@@ -200,7 +195,7 @@ impl NotionToMarkdown {
                     let child_content = self.convert_blocks_to_markdown(children)?;
                     let formatted_content = child_content
                         .lines()
-                        .map(|line| format!(">{}", line))
+                        .map(|line| format!("> {}", line))
                         .collect::<Vec<_>>()
                         .join("\n");
                     if !formatted_content.is_empty() {
