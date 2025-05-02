@@ -82,7 +82,7 @@ pub fn heading3(text: &str) -> String {
 
 /// Blockquote – handles multi‑line strings.
 pub fn quote(text: &str) -> String {
-    format!("> {}", text.replace('\n', "  \n> "))
+    format!("> {}", text)
 }
 
 /// Representation of a call‑out icon.

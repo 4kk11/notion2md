@@ -188,14 +188,14 @@ impl NotionToMarkdown {
                 let text = self.rich_text_to_markdown(&quote.rich_text);
                 let mut content = text
                     .lines()
-                    .map(|line| format!("> {}\n", line))
+                    .map(|line| format!("{}\n", utils::quote(line)))
                     .collect::<String>();
 
                 if !children.is_empty() {
                     let child_content = self.convert_blocks_to_markdown(children)?;
                     let formatted_content = child_content
                         .lines()
-                        .map(|line| format!("> {}", line))
+                        .map(|line| utils::quote(line))
                         .collect::<Vec<_>>()
                         .join("\n");
                     if !formatted_content.is_empty() {
@@ -209,7 +209,7 @@ impl NotionToMarkdown {
             BlockType::Code { code } => {
                 let text = self.rich_text_to_markdown(&code.rich_text);
                 let language = format!("{:?}", code.language).to_lowercase();
-                Ok(format!("```{}\n{}\n```\n", language, text))
+                Ok(format!("{}\n", utils::code_block(&text, Some(&language))))
             }
             BlockType::Callout { callout } => {
                 let text = self.rich_text_to_markdown(&callout.rich_text);
