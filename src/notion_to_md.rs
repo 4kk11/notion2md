@@ -214,13 +214,14 @@ impl NotionToMarkdown {
             BlockType::Callout { callout } => {
                 let text = self.rich_text_to_markdown(&callout.rich_text);
                 let mut content = format!("> [!note] {}\n", text);
+                // let mut content = format!("{}\n", utils::callout(&text, None));
 
                 if !children.is_empty() {
                     let child_content = self.convert_blocks_to_markdown(children)?;
                     let formatted_content = child_content
                         .lines()
                         .filter(|line| !line.contains(&text))
-                        .map(|line| format!(">{}", line))
+                        .map(|line| format!("> {}", line))
                         .collect::<Vec<_>>()
                         .join("\n");
                     if !formatted_content.is_empty() {
