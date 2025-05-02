@@ -7,7 +7,7 @@ use super::types::*;
 
 
 #[derive(Debug)]
-struct BlockWithChildren {
+pub struct BlockWithChildren {
     block: Block,
     children: Vec<BlockWithChildren>,
 }
@@ -26,7 +26,7 @@ impl NotionToMarkdown {
 
     pub async fn convert_page(&self, page_id: &str) -> Result<String> {
         let blocks = self.get_block_children_recursively(page_id).await?;
-        let content = self.convert_blocks_to_markdown(&blocks)?;
+        let content = NotionToMarkdown::convert_blocks_to_markdown(&blocks)?;
         Ok(content)
     }
 
@@ -70,7 +70,7 @@ impl NotionToMarkdown {
         })
     }
 
-    fn convert_blocks_to_markdown(&self, blocks: &[BlockWithChildren]) -> Result<String> {
+    pub fn convert_blocks_to_markdown(blocks: &[BlockWithChildren]) -> Result<String> {
         let mut markdown = String::new();
         let mut list_context = ListContext::new();
         let mut prev_block_type = None;
@@ -83,15 +83,14 @@ impl NotionToMarkdown {
                     list_context = ListContext::new();
                 }
             }
-            markdown.push_str(&self.convert_block_to_markdown(block, &mut list_context)?);
+            markdown.push_str(&NotionToMarkdown::convert_block_to_markdown(block, &mut list_context)?);
             prev_block_type = Some(block.block.block_type.clone());
         }
 
         Ok(markdown)
     }
 
-    fn convert_block_to_markdown(
-        &self,
+    pub fn convert_block_to_markdown(
         block_with_children: &BlockWithChildren,
         list_context: &mut ListContext,
     ) -> Result<String> {
@@ -100,7 +99,7 @@ impl NotionToMarkdown {
 
         match &block.block_type {
             BlockType::Paragraph { paragraph } => {
-                let text = self.rich_text_to_markdown(&paragraph.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&paragraph.rich_text);
                 if text.trim().is_empty() {
                     Ok(String::from("\n"))
                 } else {
@@ -108,23 +107,23 @@ impl NotionToMarkdown {
                 }
             }
             BlockType::Heading1 { heading_1 } => {
-                let text = self.rich_text_to_markdown(&heading_1.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&heading_1.rich_text);
                 Ok(format!("{}\n", utils::heading1(&text)))
             }
             BlockType::Heading2 { heading_2 } => {
-                let text = self.rich_text_to_markdown(&heading_2.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&heading_2.rich_text);
                 Ok(format!("{}\n", utils::heading2(&text)))
             }
             BlockType::Heading3 { heading_3 } => {
-                let text = self.rich_text_to_markdown(&heading_3.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&heading_3.rich_text);
                 Ok(format!("{}\n", utils::heading3(&text)))
             }
             BlockType::BulletedListItem { bulleted_list_item } => {
-                let text = self.rich_text_to_markdown(&bulleted_list_item.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&bulleted_list_item.rich_text);
                 let mut content = format!("{}\n", utils::bullet(&text, None));
 
                 if !children.is_empty() {
-                    let child_content = self.convert_blocks_to_markdown(children)?;
+                    let child_content = NotionToMarkdown::convert_blocks_to_markdown(children)?;
                     let indented_content = child_content
                         .replace("\n\n", "\n")
                         .lines()
@@ -139,13 +138,13 @@ impl NotionToMarkdown {
                 Ok(content)
             }
             BlockType::NumberedListItem { numbered_list_item } => {
-                let text = self.rich_text_to_markdown(&numbered_list_item.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&numbered_list_item.rich_text);
                 let number = list_context.next_number();
                 let mut content = format!("{}\n", utils::bullet(&text, Some(number)));
 
                 if !children.is_empty() {
                     list_context.push();
-                    let child_content = self.convert_blocks_to_markdown(children)?;
+                    let child_content = NotionToMarkdown::convert_blocks_to_markdown(children)?;
                     list_context.pop();
 
                     let indented_content = child_content
@@ -162,15 +161,15 @@ impl NotionToMarkdown {
                 Ok(content)
             }
             BlockType::ToDo { to_do } => {
-                let text = self.rich_text_to_markdown(&to_do.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&to_do.rich_text);
                 Ok(format!("{}\n", utils::todo(&text, to_do.checked.unwrap_or_default())))
             }
             BlockType::Toggle { toggle } => {
-                let text = self.rich_text_to_markdown(&toggle.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&toggle.rich_text);
                 let mut content = format!("{}\n", utils::bullet(&text, None));
 
                 if !children.is_empty() {
-                    let child_content = self.convert_blocks_to_markdown(children)?;
+                    let child_content = NotionToMarkdown::convert_blocks_to_markdown(children)?;
                     let indented_content = child_content
                         .replace("\n\n", "\n")
                         .lines()
@@ -185,14 +184,14 @@ impl NotionToMarkdown {
                 Ok(content)
             }
             BlockType::Quote { quote } => {
-                let text = self.rich_text_to_markdown(&quote.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&quote.rich_text);
                 let mut content = text
                     .lines()
                     .map(|line| format!("{}\n", utils::quote(line)))
                     .collect::<String>();
 
                 if !children.is_empty() {
-                    let child_content = self.convert_blocks_to_markdown(children)?;
+                    let child_content = NotionToMarkdown::convert_blocks_to_markdown(children)?;
                     let formatted_content = child_content
                         .lines()
                         .map(|line| utils::quote(line))
@@ -207,17 +206,17 @@ impl NotionToMarkdown {
                 Ok(content)
             }
             BlockType::Code { code } => {
-                let text = self.rich_text_to_markdown(&code.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&code.rich_text);
                 let language = format!("{:?}", code.language).to_lowercase();
                 Ok(format!("{}\n", utils::code_block(&text, Some(&language))))
             }
             BlockType::Callout { callout } => {
-                let text = self.rich_text_to_markdown(&callout.rich_text);
+                let text = NotionToMarkdown::rich_text_to_markdown(&callout.rich_text);
                 let mut content = format!("> [!note] {}\n", text);
                 // let mut content = format!("{}\n", utils::callout(&text, None));
 
                 if !children.is_empty() {
-                    let child_content = self.convert_blocks_to_markdown(children)?;
+                    let child_content = NotionToMarkdown::convert_blocks_to_markdown(children)?;
                     let formatted_content = child_content
                         .lines()
                         .filter(|line| !line.contains(&text))
@@ -255,7 +254,7 @@ impl NotionToMarkdown {
                         if let BlockType::TableRow { table_row } = &first_row.block.block_type {
                             content.push('|');
                             for cell in &table_row.cells {
-                                let cell_text = self.rich_text_to_markdown(cell);
+                                let cell_text = NotionToMarkdown::rich_text_to_markdown(cell);
                                 content.push_str(&format!(" {} |", cell_text));
                             }
                             content.push('\n');
@@ -270,7 +269,7 @@ impl NotionToMarkdown {
                                 if let BlockType::TableRow { table_row } = &row.block.block_type {
                                     content.push('|');
                                     for cell in &table_row.cells {
-                                        let cell_text = self.rich_text_to_markdown(cell);
+                                        let cell_text = NotionToMarkdown::rich_text_to_markdown(cell);
                                         content.push_str(&format!(" {} |", cell_text));
                                     }
                                     content.push('\n');
@@ -289,7 +288,7 @@ impl NotionToMarkdown {
             _ => {
                 log::warn!("Unsupported block type: {:?}", block.block_type);
                 if !children.is_empty() {
-                    self.convert_blocks_to_markdown(children)
+                    NotionToMarkdown::convert_blocks_to_markdown(children)
                 } else {
                     Ok(String::new())
                 }
@@ -297,8 +296,7 @@ impl NotionToMarkdown {
         }
     }
 
-    fn rich_text_to_markdown(
-        &self,
+    pub fn rich_text_to_markdown(
         rich_text: &[notion_client::objects::rich_text::RichText],
     ) -> String {
         if rich_text.is_empty() {
@@ -374,7 +372,7 @@ impl NotionToMarkdown {
 
 
 #[derive(Default)]
-struct ListContext {
+pub struct ListContext {
     counters: Vec<usize>,
 }
 
