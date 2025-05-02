@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.98"
+futures = "0.3.31"
 notion-client = { path = "_lib/notion-client" }
