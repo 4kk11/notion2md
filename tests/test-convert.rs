@@ -1,5 +1,7 @@
 use env_logger;
 use log::info;
+use notion_to_md_rs::builder::NotionToMarkdownBuilder;
+use notion_to_md_rs::converters::Converters;
 use notion_to_md_rs::notion_to_md::NotionToMarkdown;
 use notion_client::endpoints::Client;
 use notion_to_md_rs::types::ConfigurationOptions;
@@ -36,7 +38,12 @@ async fn test_page_conversion() -> Result<()> {
 
     let notion_client = Client::new(notion_token.clone(), None)?;
 
-    let converter = NotionToMarkdown::new(notion_client, ConfigurationOptions::default());
+    // NotionToMarkdownインスタンスを作成
+    let converter = NotionToMarkdownBuilder::new(
+        notion_client,
+        ConfigurationOptions::default(),
+    )
+    .build();
 
     // NotionToObsidianインスタンスを作成
     info!("セットアップ完了: {:?}", start_setup.elapsed());
