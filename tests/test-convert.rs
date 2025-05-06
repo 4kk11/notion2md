@@ -1,7 +1,7 @@
 use anyhow::Result;
 use log::info;
 use notion_client::endpoints::Client;
-use notion_to_md_rs::builder::NotionToMarkdownBuilder;
+use notion2md::builder::NotionToMarkdownBuilder;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;

@@ -1070,6 +1070,8 @@ dependencies = [
 [[package]]
 name = "notion-client"
 version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab7beb341ed0069791816f2571de9e906d4d97d9b110323598de325c2ac737f1"
 dependencies = [
  "chrono",
  "derive_builder",
@@ -1082,7 +1084,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "notion-to-md-rs"
+name = "notion2md"
 version = "0.1.0"
 dependencies = [
  "anyhow",
