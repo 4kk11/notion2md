@@ -1,29 +1,28 @@
-use crate::notion_to_md::{BlockWithChildren, ListContext};
+use crate::notion_to_md::{BlockWithChildren, ListContext, NotionToMarkdown};
 use notion_client::objects::block::*;
 
 // 可読性向上用。Result は anyhow::Result でも独自型でも可。
 type ConvResult = anyhow::Result<String>;
 
+// 各コンバータに渡す共通のペイロード
+pub struct ConvFuncPayload<'a, T> {
+    pub value: &'a T,
+    pub children: &'a [BlockWithChildren],
+    pub list_ctx: &'a mut ListContext,
+    pub owner: &'a NotionToMarkdown,
+}
+
 // 共通クロージャ型（ジェネリック T に実際のブロック構造体を入れる）
-type ConvFn<T> =
-    dyn Fn(&T, /* children */ &[BlockWithChildren],
-           /* list state */ &mut ListContext,
-           /* cfg */ &NotionToMarkdown)
-       -> ConvResult
-    + Send + Sync;
+type ConvFn<T> = dyn for<'a> Fn(ConvFuncPayload<'a, T>) -> ConvResult + Send + Sync;
 
 mod default_conv {
-    use notion_client::objects::block::{BlockType, BulletedListItemValue, HeadingsValue, NumberedListItemValue, ParagraphValue, ToDoValue, ToggleValue};
+    use notion_client::objects::block::*;
 
     use crate::{notion_to_md::{BlockWithChildren, ListContext, NotionToMarkdown}, utils};
+    use super::ConvFuncPayload;
 
-    pub fn paragraph(
-        _paragraph: &ParagraphValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_paragraph.rich_text);
+    pub fn paragraph(payload: ConvFuncPayload<'_, ParagraphValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         if text.trim().is_empty() {
             Ok(String::from("\n"))
         } else {
@@ -31,47 +30,27 @@ mod default_conv {
         }
     }
 
-    pub fn heading_1(
-        _heading_1: &HeadingsValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_heading_1.rich_text);
+    pub fn heading_1(payload: ConvFuncPayload<'_, HeadingsValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         Ok(format!("{}\n", utils::heading1(&text)))
     }
 
-    pub fn heading_2(
-        _heading_2: &HeadingsValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_heading_2.rich_text);
+    pub fn heading_2(payload: ConvFuncPayload<'_, HeadingsValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         Ok(format!("{}\n", utils::heading2(&text)))
     }
 
-    pub fn heading_3(
-        _heading_3: &HeadingsValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_heading_3.rich_text);
+    pub fn heading_3(payload: ConvFuncPayload<'_, HeadingsValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         Ok(format!("{}\n", utils::heading3(&text)))
     }
 
-    pub fn bulleted_list_item(
-        _bulleted_list: &BulletedListItemValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_bulleted_list.rich_text);
+    pub fn bulleted_list_item(payload: ConvFuncPayload<'_, BulletedListItemValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         let mut content = format!("{}\n", utils::bullet(&text, None));
 
-        if !_children.is_empty() {
-            let child_content = _owner.convert_blocks_to_markdown(_children)?;
+        if !payload.children.is_empty() {
+            let child_content = payload.owner.convert_blocks_to_markdown(payload.children)?;
             let indented_content = child_content
                 .replace("\n\n", "\n")
                 .lines()
@@ -86,20 +65,15 @@ mod default_conv {
         Ok(content)
     }
 
-    pub fn numbered_list_item(
-        _numbered_list: &NumberedListItemValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_numbered_list.rich_text);
-        let number = _list_context.next_number();
+    pub fn numbered_list_item(payload: ConvFuncPayload<'_, NumberedListItemValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
+        let number = payload.list_ctx.next_number();
         let mut content = format!("{}\n", utils::bullet(&text, Some(number)));
 
-        if !_children.is_empty() {
-            _list_context.push();
-            let child_content = _owner.convert_blocks_to_markdown(_children)?;
-            _list_context.pop();
+        if !payload.children.is_empty() {
+            payload.list_ctx.push();
+            let child_content = payload.owner.convert_blocks_to_markdown(payload.children)?;
+            payload.list_ctx.pop();
 
             let indented_content = child_content
                 .replace("\n\n", "\n")
@@ -115,29 +89,17 @@ mod default_conv {
         Ok(content)
     }
 
-
-    pub fn to_do(
-        _todo: &ToDoValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_todo.rich_text);
-        Ok(format!("{}\n", utils::todo(&text, _todo.checked.unwrap_or_default())))
+    pub fn to_do(payload: ConvFuncPayload<'_, ToDoValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
+        Ok(format!("{}\n", utils::todo(&text, payload.value.checked.unwrap_or_default())))
     }
 
-
-    pub fn toggle(
-        _toggle: &ToggleValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_toggle.rich_text);
+    pub fn toggle(payload: ConvFuncPayload<'_, ToggleValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         let mut content = format!("{}\n", utils::bullet(&text, None));
 
-        if !_children.is_empty() {
-            let child_content = _owner.convert_blocks_to_markdown(_children)?;
+        if !payload.children.is_empty() {
+            let child_content = payload.owner.convert_blocks_to_markdown(payload.children)?;
             let indented_content = child_content
                 .replace("\n\n", "\n")
                 .lines()
@@ -152,20 +114,15 @@ mod default_conv {
         Ok(content)
     }
 
-    pub fn quote(
-        _quote: &notion_client::objects::block::QuoteValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_quote.rich_text);
+    pub fn quote(payload: ConvFuncPayload<'_, QuoteValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         let mut content = text
             .lines()
             .map(|line| format!("{}\n", utils::quote(line)))
             .collect::<String>();
 
-        if !_children.is_empty() {
-            let child_content = _owner.convert_blocks_to_markdown(_children)?;
+        if !payload.children.is_empty() {
+            let child_content = payload.owner.convert_blocks_to_markdown(payload.children)?;
             let formatted_content = child_content
                 .lines()
                 .map(|line| utils::quote(line))
@@ -180,29 +137,18 @@ mod default_conv {
         Ok(content)
     }
 
-    pub fn code(
-        _code: &notion_client::objects::block::CodeValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_code.rich_text);
-        let language = format!("{:?}", _code.language).to_lowercase();
+    pub fn code(payload: ConvFuncPayload<'_, CodeValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
+        let language = format!("{:?}", payload.value.language).to_lowercase();
         Ok(format!("{}\n", utils::code_block(&text, Some(&language))))
     }
 
-    pub fn callout(
-        _callout: &notion_client::objects::block::CalloutValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let text = NotionToMarkdown::rich_text_to_markdown(&_callout.rich_text);
+    pub fn callout(payload: ConvFuncPayload<'_, CalloutValue>) -> anyhow::Result<String> {
+        let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         let mut content = format!("> [!note] {}\n", text);
-        // let mut content = format!("{}\n", utils::callout(&text, None));
 
-        if !_children.is_empty() {
-            let child_content = _owner.convert_blocks_to_markdown(_children)?;
+        if !payload.children.is_empty() {
+            let child_content = payload.owner.convert_blocks_to_markdown(payload.children)?;
             let formatted_content = child_content
                 .lines()
                 .filter(|line| !line.contains(&text))
@@ -218,63 +164,33 @@ mod default_conv {
         Ok(content)
     }
 
-    pub fn image(
-        _image: &notion_client::objects::block::ImageValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let url = NotionToMarkdown::get_file_url(&_image.file_type);
+    pub fn image(payload: ConvFuncPayload<'_, ImageValue>) -> anyhow::Result<String> {
+        let url = NotionToMarkdown::get_file_url(&payload.value.file_type);
         Ok(format!("![]({})\n\n", url))
     }
 
-    pub fn video(
-        _video: &notion_client::objects::block::VideoValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        let url = NotionToMarkdown::get_file_url(&_video.file_type);
+    pub fn video(payload: ConvFuncPayload<'_, VideoValue>) -> anyhow::Result<String> {
+        let url = NotionToMarkdown::get_file_url(&payload.value.file_type);
         Ok(format!("![]({})\n\n", url))
     }
 
-    pub fn bookmark(
-        _bookmark: &notion_client::objects::block::BookmarkValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        Ok(format!("[{}]({})\n\n", _bookmark.url, _bookmark.url))
+    pub fn bookmark(payload: ConvFuncPayload<'_, BookmarkValue>) -> anyhow::Result<String> {
+        Ok(format!("[{}]({})\n\n", payload.value.url, payload.value.url))
     }
 
-    pub fn link_preview(
-        _link_preview: &notion_client::objects::block::LinkPreviewValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
-        Ok(format!("[{}]({})\n\n", _link_preview.url, _link_preview.url))
+    pub fn link_preview(payload: ConvFuncPayload<'_, LinkPreviewValue>) -> anyhow::Result<String> {
+        Ok(format!("[{}]({})\n\n", payload.value.url, payload.value.url))
     }
 
-    pub fn divider(
-        _divider: &notion_client::objects::block::DividerValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
+    pub fn divider(_payload: ConvFuncPayload<'_, DividerValue>) -> anyhow::Result<String> {
         Ok("---\n\n".to_string())
     }
 
-    pub fn table(
-        _table: &notion_client::objects::block::TableValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
+    pub fn table(payload: ConvFuncPayload<'_, TableValue>) -> anyhow::Result<String> {
         let mut content = String::new();
 
-        if !_children.is_empty() {
-            if let Some(first_row) = _children.first() {
+        if !payload.children.is_empty() {
+            if let Some(first_row) = payload.children.first() {
                 if let BlockType::TableRow { table_row } = &first_row.block.block_type {
                     content.push('|');
                     for cell in &table_row.cells {
@@ -289,7 +205,7 @@ mod default_conv {
                     }
                     content.push('\n');
 
-                    for row in _children.iter().skip(1) {
+                    for row in payload.children.iter().skip(1) {
                         if let BlockType::TableRow { table_row } = &row.block.block_type {
                             content.push('|');
                             for cell in &table_row.cells {
@@ -306,16 +222,10 @@ mod default_conv {
         Ok(content)
     }
 
-
-    pub fn embed(
-        _embed: &notion_client::objects::block::EmbedValue,
-        _children: &[BlockWithChildren],
-        _list_context: &mut ListContext,
-        _owner: &NotionToMarkdown,
-    ) -> anyhow::Result<String> {
+    pub fn embed(payload: ConvFuncPayload<'_, EmbedValue>) -> anyhow::Result<String> {
         Ok(format!(
             "<iframe src=\"{}\" width=\"100%\" height=\"500px\"></iframe>\n\n",
-            _embed.url
+            payload.value.url
         ))
     }
 }
@@ -325,9 +235,7 @@ macro_rules! define_converters {
     (
         $( ($Variant:ident, $field:ident, $Payload:ty) ),+ $(,)?
     ) => {
-
         use crate::builder::NotionToMarkdownBuilder;
-        use crate::notion_to_md::NotionToMarkdown;
         use notion_client::objects::block::BlockType;
         
         // ① Converters 構造体
@@ -348,10 +256,7 @@ macro_rules! define_converters {
             $(
             pub fn $field<F>(mut self, f: F) -> Self
             where
-                F: Fn(&$Payload,
-                      &[BlockWithChildren],
-                      &mut ListContext,
-                      &NotionToMarkdown) -> ConvResult
+                F: for<'a> Fn(ConvFuncPayload<'a, $Payload>) -> ConvResult
                    + Send + Sync + 'static,
             {
                 self.converters.$field = std::sync::Arc::new(f);
@@ -369,7 +274,14 @@ macro_rules! define_converters {
                 match &bwc.block.block_type {
                     $(
                     BlockType::$Variant { $field: inner } => {
-                        (self.converters.$field)(inner, &bwc.children, ctx, self)
+                        (self.converters.$field)(
+                            ConvFuncPayload {
+                                value: inner,
+                                children: &bwc.children,
+                                list_ctx: ctx,
+                                owner: self,
+                            }
+                        )
                     }
                     )+
                     _ => {

@@ -5,6 +5,7 @@ use notion_to_md_rs::converters::Converters;
 use notion_to_md_rs::notion_to_md::NotionToMarkdown;
 use notion_client::endpoints::Client;
 use notion_to_md_rs::types::ConfigurationOptions;
+use notion_to_md_rs::utils;
 use std::fs;
 use anyhow::Result;
 use std::path::PathBuf;
