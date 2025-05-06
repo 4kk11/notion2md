@@ -1,13 +1,13 @@
+use anyhow::Result;
 use env_logger;
 use log::info;
+use notion_client::endpoints::Client;
 use notion_to_md_rs::builder::NotionToMarkdownBuilder;
 use notion_to_md_rs::converters::Converters;
 use notion_to_md_rs::notion_to_md::NotionToMarkdown;
-use notion_client::endpoints::Client;
 use notion_to_md_rs::types::ConfigurationOptions;
 use notion_to_md_rs::utils;
 use std::fs;
-use anyhow::Result;
 use std::path::PathBuf;
 use std::time::Instant;
 use tokio;
@@ -40,11 +40,8 @@ async fn test_page_conversion() -> Result<()> {
     let notion_client = Client::new(notion_token.clone(), None)?;
 
     // NotionToMarkdownインスタンスを作成
-    let converter = NotionToMarkdownBuilder::new(
-        notion_client,
-        ConfigurationOptions::default(),
-    )
-    .build();
+    let converter =
+        NotionToMarkdownBuilder::new(notion_client, ConfigurationOptions::default()).build();
 
     // NotionToObsidianインスタンスを作成
     info!("セットアップ完了: {:?}", start_setup.elapsed());
@@ -57,7 +54,10 @@ async fn test_page_conversion() -> Result<()> {
     // 変換したMarkdownをファイルに保存
     let output_file_path = obsidian_dir.join(format!("{}.md", TEST_OUTPUT_PAGE_TITLE));
     fs::write(&output_file_path, markdown_text).expect("Failed to write test_output.md");
-    info!("Markdownファイルの保存完了: {:?}", start_conversion.elapsed());
+    info!(
+        "Markdownファイルの保存完了: {:?}",
+        start_conversion.elapsed()
+    );
 
     // テストケースのファイルを読み込み
     let expected_content =

@@ -1,10 +1,15 @@
+use crate::converters::Converters;
 use anyhow::Result;
 use futures::future::BoxFuture;
-use notion_client::{endpoints::Client, objects::{block::{Block, BlockType}, file::File}};
-use crate::{converters::Converters, utils};
+use notion_client::{
+    endpoints::Client,
+    objects::{
+        block::{Block, BlockType},
+        file::File,
+    },
+};
 
 use super::types::*;
-
 
 #[derive(Debug)]
 pub struct BlockWithChildren {
@@ -18,7 +23,11 @@ pub struct NotionToMarkdown {
 }
 
 impl NotionToMarkdown {
-    pub fn new(notion_client: Client, config: ConfigurationOptions, converters: Converters) -> Self {
+    pub fn new(
+        notion_client: Client,
+        config: ConfigurationOptions,
+        converters: Converters,
+    ) -> Self {
         NotionToMarkdown {
             client: notion_client,
             config,
@@ -46,7 +55,7 @@ impl NotionToMarkdown {
                     .blocks
                     .retrieve_block_children(block_id, start_cursor.as_deref(), None)
                     .await?;
-                    // .map_err(|e| NotionToObsidianError::BlockRetrievalError(e.to_string()))?;
+                // .map_err(|e| NotionToObsidianError::BlockRetrievalError(e.to_string()))?;
 
                 for block in response.results {
                     let children = if block.has_children.unwrap_or(false) {
@@ -85,9 +94,7 @@ impl NotionToMarkdown {
                     list_context = ListContext::new();
                 }
             }
-            markdown.push_str(
-                &self.convert_block_to_markdown_inner(block, &mut list_context)?
-            );
+            markdown.push_str(&self.convert_block_to_markdown_inner(block, &mut list_context)?);
             prev_block_type = Some(block.block.block_type.clone());
         }
 
@@ -159,7 +166,6 @@ impl NotionToMarkdown {
         markdown
     }
 
-
     pub fn get_file_url(file: &File) -> String {
         match file {
             File::External { external } => external.url.clone(),
@@ -167,7 +173,6 @@ impl NotionToMarkdown {
         }
     }
 }
-
 
 #[derive(Default)]
 pub struct ListContext {

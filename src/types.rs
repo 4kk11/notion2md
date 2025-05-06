@@ -1,4 +1,3 @@
-
 #[derive(Debug, Default)]
 pub struct ConfigurationOptions {
     separate_child_page: bool,

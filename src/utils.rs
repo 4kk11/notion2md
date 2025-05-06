@@ -14,7 +14,7 @@
 // src/lib.rs – Markdown utility helpers + equivalent tests
 // ------------------------------------------------------------
 
-use base64::{engine::general_purpose, Engine as _};
+use base64::{Engine as _, engine::general_purpose};
 use regex::Regex;
 use std::error::Error;
 
@@ -111,7 +111,15 @@ pub fn callout(text: &str, icon: Option<CalloutIcon>) -> String {
         // Preserve heading level inside the call‑out.
         let hashes = &caps[1];
         let content = &caps[2];
-        return format!("> {}{} {}", hashes, if emoji_prefix.is_empty() { "" } else { " " }, emoji_prefix.trim_end()).trim_end().to_owned() + content;
+        return format!(
+            "> {}{} {}",
+            hashes,
+            if emoji_prefix.is_empty() { "" } else { " " },
+            emoji_prefix.trim_end()
+        )
+        .trim_end()
+        .to_owned()
+            + content;
     }
 
     format!("> {}{}", emoji_prefix, formatted_text)
@@ -141,7 +149,10 @@ pub fn add_tab_space(text: &str, n: usize) -> String {
     let mut out = String::from(text);
     for _ in 0..n {
         if out.contains('\n') {
-            out = out.split('\n').collect::<Vec<_>>().join(&format!("\n{}", tab));
+            out = out
+                .split('\n')
+                .collect::<Vec<_>>()
+                .join(&format!("\n{}", tab));
             out = format!("{}{}", tab, out);
         } else {
             out = format!("{}{}", tab, out);
@@ -214,19 +225,12 @@ pub fn table(rows: &[Vec<&str>]) -> String {
 /// Follows the behaviour of the original JS implementation.
 /// * If `convert_to_base64` is false, or the href already contains a `data:` URI, we simply emit it.
 /// * Otherwise we synchronously download the image and embed the base64 payload (PNG‑assumed).
-pub fn image(
-    alt: &str,
-    href: &str,
-    convert_to_base64: bool,
-) -> Result<String, Box<dyn Error>> {
+pub fn image(alt: &str, href: &str, convert_to_base64: bool) -> Result<String, Box<dyn Error>> {
     if !convert_to_base64 || href.starts_with("data:") {
         if href.starts_with("data:") {
             // Attempt to normalise to PNG MIME
             let base64_data = href.splitn(2, ',').nth(1).unwrap_or("");
-            return Ok(format!(
-                "![{}](data:image/png;base64,{})",
-                alt, base64_data
-            ));
+            return Ok(format!("![{}](data:image/png;base64,{})", alt, base64_data));
         }
         return Ok(format!("![{}]({})", alt, href));
     }
@@ -234,10 +238,7 @@ pub fn image(
     // Blocking download
     let bytes = reqwest::blocking::get(href)?.bytes()?;
     let encoded = general_purpose::STANDARD.encode(bytes);
-    Ok(format!(
-        "![{}](data:image/png;base64,{})",
-        alt, encoded
-    ))
+    Ok(format!("![{}](data:image/png;base64,{})", alt, encoded))
 }
 
 // ------------------------------------------------------------
@@ -270,11 +271,7 @@ mod tests {
     // --------------- Markdown Table ----------
     #[test]
     fn simple_table() {
-        let mock = vec![
-            vec!["number", "char"],
-            vec!["1", "a"],
-            vec!["2", "b"],
-        ];
+        let mock = vec![vec!["number", "char"], vec!["1", "a"], vec!["2", "b"]];
         let expected = "| number | char |\n| ------ | ---- |\n| 1      | a    |\n| 2      | b    |";
         assert_eq!(table(&mock), expected);
     }

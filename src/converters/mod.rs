@@ -18,8 +18,8 @@ type ConvFn<T> = dyn for<'a> Fn(ConvFuncPayload<'a, T>) -> ConvResult + Send + S
 mod default_conv {
     use notion_client::objects::block::*;
 
-    use crate::{notion_to_md::{BlockWithChildren, ListContext, NotionToMarkdown}, utils};
     use super::ConvFuncPayload;
+    use crate::{notion_to_md::NotionToMarkdown, utils};
 
     pub fn paragraph(payload: ConvFuncPayload<'_, ParagraphValue>) -> anyhow::Result<String> {
         let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
@@ -45,7 +45,9 @@ mod default_conv {
         Ok(format!("{}\n", utils::heading3(&text)))
     }
 
-    pub fn bulleted_list_item(payload: ConvFuncPayload<'_, BulletedListItemValue>) -> anyhow::Result<String> {
+    pub fn bulleted_list_item(
+        payload: ConvFuncPayload<'_, BulletedListItemValue>,
+    ) -> anyhow::Result<String> {
         let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         let mut content = format!("{}\n", utils::bullet(&text, None));
 
@@ -65,7 +67,9 @@ mod default_conv {
         Ok(content)
     }
 
-    pub fn numbered_list_item(payload: ConvFuncPayload<'_, NumberedListItemValue>) -> anyhow::Result<String> {
+    pub fn numbered_list_item(
+        payload: ConvFuncPayload<'_, NumberedListItemValue>,
+    ) -> anyhow::Result<String> {
         let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
         let number = payload.list_ctx.next_number();
         let mut content = format!("{}\n", utils::bullet(&text, Some(number)));
@@ -91,7 +95,10 @@ mod default_conv {
 
     pub fn to_do(payload: ConvFuncPayload<'_, ToDoValue>) -> anyhow::Result<String> {
         let text = NotionToMarkdown::rich_text_to_markdown(&payload.value.rich_text);
-        Ok(format!("{}\n", utils::todo(&text, payload.value.checked.unwrap_or_default())))
+        Ok(format!(
+            "{}\n",
+            utils::todo(&text, payload.value.checked.unwrap_or_default())
+        ))
     }
 
     pub fn toggle(payload: ConvFuncPayload<'_, ToggleValue>) -> anyhow::Result<String> {
@@ -175,11 +182,17 @@ mod default_conv {
     }
 
     pub fn bookmark(payload: ConvFuncPayload<'_, BookmarkValue>) -> anyhow::Result<String> {
-        Ok(format!("[{}]({})\n\n", payload.value.url, payload.value.url))
+        Ok(format!(
+            "[{}]({})\n\n",
+            payload.value.url, payload.value.url
+        ))
     }
 
     pub fn link_preview(payload: ConvFuncPayload<'_, LinkPreviewValue>) -> anyhow::Result<String> {
-        Ok(format!("[{}]({})\n\n", payload.value.url, payload.value.url))
+        Ok(format!(
+            "[{}]({})\n\n",
+            payload.value.url, payload.value.url
+        ))
     }
 
     pub fn divider(_payload: ConvFuncPayload<'_, DividerValue>) -> anyhow::Result<String> {
@@ -237,7 +250,7 @@ macro_rules! define_converters {
     ) => {
         use crate::builder::NotionToMarkdownBuilder;
         use notion_client::objects::block::BlockType;
-        
+
         // ① Converters 構造体
         pub struct Converters {
             $( pub $field: std::sync::Arc<ConvFn<$Payload>>, )+
@@ -293,7 +306,6 @@ macro_rules! define_converters {
         }
     };
 }
-
 
 //==================== 2. たった 1 行で宣言 ====================
 define_converters! {

@@ -1,12 +1,5 @@
-use std::sync::Arc;
-
-use anyhow::Result;
-use notion_client::{endpoints::Client, objects::block::ParagraphValue};
-
-use crate::{converters::Converters, notion_to_md::{BlockWithChildren, ListContext, NotionToMarkdown}, types::ConfigurationOptions};
-
-
-
+use crate::{converters::Converters, notion_to_md::NotionToMarkdown, types::ConfigurationOptions};
+use notion_client::endpoints::Client;
 
 pub struct NotionToMarkdownBuilder {
     client: Client,
@@ -24,11 +17,6 @@ impl NotionToMarkdownBuilder {
     }
 
     pub fn build(self) -> NotionToMarkdown {
-        NotionToMarkdown::new(
-            self.client,
-            self.config,
-            self.converters,
-        )
+        NotionToMarkdown::new(self.client, self.config, self.converters)
     }
-
 }
