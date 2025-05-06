@@ -9,8 +9,6 @@ use notion_client::{
     },
 };
 
-use super::types::*;
-
 #[derive(Debug)]
 pub struct BlockWithChildren {
     pub block: Block,
@@ -18,19 +16,16 @@ pub struct BlockWithChildren {
 }
 pub struct NotionToMarkdown {
     client: Client,
-    pub config: ConfigurationOptions,
     pub converters: Converters,
 }
 
 impl NotionToMarkdown {
     pub fn new(
         notion_client: Client,
-        config: ConfigurationOptions,
         converters: Converters,
     ) -> Self {
         NotionToMarkdown {
             client: notion_client,
-            config,
             converters,
         }
     }

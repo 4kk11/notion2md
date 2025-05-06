@@ -2,7 +2,6 @@ use anyhow::Result;
 use log::info;
 use notion_client::endpoints::Client;
 use notion_to_md_rs::builder::NotionToMarkdownBuilder;
-use notion_to_md_rs::types::ConfigurationOptions;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -36,7 +35,7 @@ async fn test_page_conversion() -> Result<()> {
 
     // NotionToMarkdownインスタンスを作成
     let converter =
-        NotionToMarkdownBuilder::new(notion_client, ConfigurationOptions::default()).build();
+        NotionToMarkdownBuilder::new(notion_client).build();
 
     // NotionToObsidianインスタンスを作成
     info!("セットアップ完了: {:?}", start_setup.elapsed());
