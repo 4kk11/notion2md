@@ -1,16 +1,11 @@
 use anyhow::Result;
-use env_logger;
 use log::info;
 use notion_client::endpoints::Client;
 use notion_to_md_rs::builder::NotionToMarkdownBuilder;
-use notion_to_md_rs::converters::Converters;
-use notion_to_md_rs::notion_to_md::NotionToMarkdown;
 use notion_to_md_rs::types::ConfigurationOptions;
-use notion_to_md_rs::utils;
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
-use tokio;
 
 const TEST_PAGE_ID: &str = "1aeb266e0c708060a6fec6eb458e1379";
 const TEST_OUTPUT_PAGE_TITLE: &str = "test";

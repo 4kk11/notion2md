@@ -132,7 +132,7 @@ mod default_conv {
             let child_content = payload.owner.convert_blocks_to_markdown(payload.children)?;
             let formatted_content = child_content
                 .lines()
-                .map(|line| utils::quote(line))
+                .map(utils::quote)
                 .collect::<Vec<_>>()
                 .join("\n");
             if !formatted_content.is_empty() {

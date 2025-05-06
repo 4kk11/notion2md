@@ -229,7 +229,7 @@ pub fn image(alt: &str, href: &str, convert_to_base64: bool) -> Result<String, B
     if !convert_to_base64 || href.starts_with("data:") {
         if href.starts_with("data:") {
             // Attempt to normalise to PNG MIME
-            let base64_data = href.splitn(2, ',').nth(1).unwrap_or("");
+            let base64_data = href.split_once(',').map(|x| x.1).unwrap_or("");
             return Ok(format!("![{}](data:image/png;base64,{})", alt, base64_data));
         }
         return Ok(format!("![{}]({})", alt, href));
