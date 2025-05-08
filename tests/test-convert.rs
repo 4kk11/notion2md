@@ -1,6 +1,6 @@
 use anyhow::Result;
 use log::info;
-use notion2md::Client;
+use notion2md::notion_client::Client;
 use notion2md::builder::NotionToMarkdownBuilder;
 use std::fs;
 use std::path::PathBuf;

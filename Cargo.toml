@@ -1,6 +1,6 @@
 [package]
 name = "notion2md"
-version = "0.1.0-alpha.2"
+version = "0.1.0-alpha.3"
 edition = "2021"
 description = "A Rust library for converting Notion pages to Markdown"
 authors = ["4kk11"]
