@@ -16,7 +16,7 @@ dotenv = "0.15.0"
 env_logger = "0.11.8"
 futures = "0.3.31"
 log = "0.4.27"
-notion-client = "^1.0.5"
+notion-client = "^1.0.8"
 regex = "1.11.1"
 reqwest = {version = "0.12.15", features = ["blocking"]}
 tokio = {version = "1.44.2", features = ["full"]}
